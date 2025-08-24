@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Note Organizer</title>
+    <meta name="description" content="Comprehensive digital note organizer with advanced features">
+    <meta name="theme-color" content="#3b82f6">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="favicon.ico">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="light-theme">
+    <!-- Header -->
+    <header class="header" role="banner">
+        <div class="header-left">
+            <button id="menu-toggle" class="menu-btn" aria-label="Toggle menu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <h1 class="app-title">Note Organizer</h1>
+        </div>
+        
+        <div class="header-center">
+            <div class="search-container">
+                <input type="search" id="global-search" placeholder="Search notes..." 
+                       aria-label="Search notes" class="search-input">
+                <button id="search-filters" class="search-filter-btn" aria-label="Search filters">
+                    <i class="fas fa-filter"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="header-right">
+            <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button id="new-note" class="new-note-btn" aria-label="Create new note">
+                <i class="fas fa-plus"></i>
+                New Note
+            </button>
+            <button id="settings" class="settings-btn" aria-label="Settings">
+                <i class="fas fa-cog"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Sidebar -->
+        <aside class="sidebar" role="complementary">
+            <div class="sidebar-section">
+                <h2 class="sidebar-title">Quick Access</h2>
+                <ul class="quick-access-list">
+                    <li><button class="quick-access-btn active" data-filter="all">
+                        <i class="fas fa-sticky-note"></i> All Notes
+                    </button></li>
+                    <li><button class="quick-access-btn" data-filter="recent">
+                        <i class="fas fa-clock"></i> Recent
+                    </button></li>
+                    <li><button class="quick-access-btn" data-filter="favorites">
+                        <i class="fas fa-star"></i> Favorites
+                    </button></li>
+                    <li><button class="quick-access-btn" data-filter="shared">
+                        <i class="fas fa-share"></i> Shared
+                    </button></li>
+                </ul>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="section-header">
+                    <h2 class="sidebar-title">Folders</h2>
+                    <button id="new-folder" class="add-btn" aria-label="Create new folder">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <div id="folders-container" class="folders-container">
+                    <!-- Folders will be dynamically inserted here -->
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="section-header">
+                    <h2 class="sidebar-title">Tags</h2>
+                    <button id="manage-tags" class="add-btn" aria-label="Manage tags">
+                        <i class="fas fa-tag"></i>
+                    </button>
+                </div>
+                <div id="tags-container" class="tags-container">
+                    <!-- Tags will be dynamically inserted here -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- Content Area -->
+        <section class="content-area" role="main">
+            <div class="content-header">
+                <div class="view-options">
+                    <button id="grid-view" class="view-btn active" aria-label="Grid view">
+                        <i class="fas fa-th"></i>
+                    </button>
+                    <button id="list-view" class="view-btn" aria-label="List view">
+                        <i class="fas fa-list"></i>
+                    </button>
+                </div>
+                
+                <div class="sort-options">
+                    <select id="sort-by" class="sort-select" aria-label="Sort by">
+                        <option value="modified">Last Modified</option>
+                        <option value="created">Date Created</option>
+                        <option value="title">Title</option>
+                        <option value="folder">Folder</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="notes-container" class="notes-container grid-view">
+                <!-- Notes will be dynamically inserted here -->
+            </div>
+            
+            <!-- Empty state -->
+            <div id="empty-state" class="empty-state hidden">
+                <i class="fas fa-sticky-note empty-icon"></i>
+                <h3>No notes yet</h3>
+                <p>Create your first note to get started organizing your thoughts!</p>
+                <button id="create-first-note" class="cta-btn">Create Note</button>
+            </div>
+        </section>
+
+        <!-- Note Editor Panel -->
+        <section id="note-editor" class="note-editor hidden" role="dialog" aria-labelledby="editor-title">
+            <div class="editor-header">
+                <input type="text" id="note-title" placeholder="Note title..." class="note-title-input" aria-label="Note title">
+                <div class="editor-controls">
+                    <button id="favorite-note" class="editor-btn" aria-label="Toggle favorite">
+                        <i class="far fa-star"></i>
+                    </button>
+                    <button id="share-note" class="editor-btn" aria-label="Share note">
+                        <i class="fas fa-share"></i>
+                    </button>
+                    <button id="note-settings" class="editor-btn" aria-label="Note settings">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <button id="close-editor" class="close-btn" aria-label="Close editor">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="editor-toolbar">
+                <div class="format-group">
+                    <button class="format-btn" data-command="bold" aria-label="Bold">
+                        <i class="fas fa-bold"></i>
+                    </button>
+                    <button class="format-btn" data-command="italic" aria-label="Italic">
+                        <i class="fas fa-italic"></i>
+                    </button>
+                    <button class="format-btn" data-command="underline" aria-label="Underline">
+                        <i class="fas fa-underline"></i>
+                    </button>
+                </div>
+                
+                <div class="insert-group">
+                    <button id="insert-image" class="format-btn" aria-label="Insert image">
+                        <i class="fas fa-image"></i>
+                    </button>
+                    <button id="insert-voice" class="format-btn" aria-label="Voice recording">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <button id="insert-sketch" class="format-btn" aria-label="Add sketch">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                    <button id="insert-link" class="format-btn" aria-label="Insert link">
+                        <i class="fas fa-link"></i>
+                    </button>
+                </div>
+
+                <div class="color-group">
+                    <div class="color-picker">
+                        <button class="color-btn" data-color="#ffffff" style="background-color: #ffffff" aria-label="White"></button>
+                        <button class="color-btn" data-color="#ffeb3b" style="background-color: #ffeb3b" aria-label="Yellow"></button>
+                        <button class="color-btn" data-color="#4caf50" style="background-color: #4caf50" aria-label="Green"></button>
+                        <button class="color-btn" data-color="#2196f3" style="background-color: #2196f3" aria-label="Blue"></button>
+                        <button class="color-btn" data-color="#ff5722" style="background-color: #ff5722" aria-label="Red"></button>
+                        <button class="color-btn" data-color="#9c27b0" style="background-color: #9c27b0" aria-label="Purple"></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="editor-content">
+                <div id="note-content" class="note-editor-area" contenteditable="true" 
+                     aria-label="Note content" role="textbox" aria-multiline="true">
+                </div>
+                
+                <div class="editor-metadata">
+                    <div class="tags-input-container">
+                        <input type="text" id="tags-input" placeholder="Add tags..." class="tags-input">
+                        <div id="note-tags" class="note-tags"></div>
+                    </div>
+                    
+                    <div class="folder-select-container">
+                        <select id="folder-select" class="folder-select" aria-label="Select folder">
+                            <option value="">No folder</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="editor-footer">
+                <div class="editor-status">
+                    <span id="word-count">0 words</span>
+                    <span id="last-saved">Not saved</span>
+                </div>
+                <div class="editor-actions">
+                    <button id="save-note" class="save-btn">Save</button>
+                    <button id="export-note" class="export-btn">Export</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modals -->
+    <div id="modal-overlay" class="modal-overlay hidden" aria-hidden="true">
+        <!-- Search Filters Modal -->
+        <div id="search-modal" class="modal search-modal hidden">
+            <div class="modal-header">
+                <h2>Advanced Search</h2>
+                <button class="modal-close" aria-label="Close modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-content">
+                <div class="filter-group">
+                    <label for="filter-text">Text contains:</label>
+                    <input type="text" id="filter-text" class="filter-input">
+                </div>
+                <div class="filter-group">
+                    <label for="filter-folder">Folder:</label>
+                    <select id="filter-folder" class="filter-select">
+                        <option value="">All folders</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filter-tags">Tags:</label>
+                    <input type="text" id="filter-tags" class="filter-input" placeholder="Comma-separated tags">
+                </div>
+                <div class="filter-group">
+                    <label for="filter-date">Date range:</label>
+                    <div class="date-range">
+                        <input type="date" id="filter-date-from" class="date-input">
+                        <span>to</span>
+                        <input type="date" id="filter-date-to" class="date-input">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="clear-filters" class="btn-secondary">Clear All</button>
+                <button id="apply-filters" class="btn-primary">Apply Filters</button>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="modal settings-modal hidden">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button class="modal-close" aria-label="Close modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-content">
+                <div class="settings-section">
+                    <h3>Appearance</h3>
+                    <div class="setting-item">
+                        <label for="theme-select">Theme:</label>
+                        <select id="theme-select">
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                            <option value="auto">Auto</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h3>Privacy & Security</h3>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="encrypt-notes"> Enable encryption
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="auto-backup"> Auto backup
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h3>Keyboard Shortcuts</h3>
+                    <div class="shortcuts-list">
+                        <div class="shortcut-item">
+                            <span>New note:</span>
+                            <kbd>Ctrl + N</kbd>
+                        </div>
+                        <div class="shortcut-item">
+                            <span>Save note:</span>
+                            <kbd>Ctrl + S</kbd>
+                        </div>
+                        <div class="shortcut-item">
+                            <span>Search:</span>
+                            <kbd>Ctrl + F</kbd>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+    <!-- Scripts -->
+    <script src="js/app.js"></script>
+    <script src="js/noteManager.js"></script>
+    <script src="js/searchManager.js"></script>
+    <script src="js/storageManager.js"></script>
+    <script src="js/themeManager.js"></script>
+<!-- Service Worker Registration -->
+    <script>
+        // Register service worker for offline functionality
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('Service Worker registered successfully:', registration.scope);
+                        
+                        // Listen for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // Show update available notification
+                                    if (window.noteApp) {
+                                        window.noteApp.showToast('App update available. Refresh to update.', 'info');
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch((error) => {
+                        console.error('Service Worker registration failed:', error);
+                    });
+            });
+
+            // Listen for messages from service worker
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data.type === 'SW_UPDATE_AVAILABLE') {
+                    if (window.noteApp) {
+                        window.noteApp.showToast('App update available. Refresh to update.', 'info');
+                    }
+                }
+            });
+        }
+    </script>
+    <script src="js/keyboardShortcuts.js"></script>
+</body>
+</html>

@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Note Organizer - Bug Fix Tests</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .test-pass {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .test-fail {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .test-pending {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .danger {
+            background: #dc3545;
+        }
+        .danger:hover {
+            background: #c82333;
+        }
+        #test-output {
+            font-family: monospace;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🐛 Note Organizer - Bug Fix Verification Tests</h1>
+    
+    <div class="test-container">
+        <h2>Test Suite Controls</h2>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="clearResults()">Clear Results</button>
+        <button onclick="testMemoryLeaks()" class="danger">Test Memory Leaks (Careful!)</button>
+        <button onclick="testXSSProtection()">Test XSS Protection</button>
+        <button onclick="testValidation()">Test Input Validation</button>
+        <button onclick="testErrorHandling()">Test Error Handling</button>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Results</h2>
+        <div id="test-results"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>Console Output</h2>
+        <div id="test-output"></div>
+    </div>
+
+    <!-- Load the fixed components -->
+    <script src="js/storageManager.js"></script>
+    <script src="js/noteManager.js"></script>
+    <script src="js/searchManager.js"></script>
+    <script src="js/themeManager.js"></script>
+    <script src="js/keyboardShortcuts.js"></script>
+    <script src="js/app.js"></script>
+
+    <script>
+        // Test framework
+        class TestFramework {
+            constructor() {
+                this.tests = [];
+                this.results = [];
+                this.output = document.getElementById('test-output');
+                this.resultsContainer = document.getElementById('test-results');
+                
+                // Capture console output
+                this.originalConsole = {
+                    log: console.log,
+                    error: console.error,
+                    warn: console.warn
+                };
+                
+                this.setupConsoleCapture();
+            }
+
+            setupConsoleCapture() {
+                const testFramework = this;
+                
+                ['log', 'error', 'warn'].forEach(method => {
+                    console[method] = function(...args) {
+                        testFramework.originalConsole[method].apply(console, args);
+                        testFramework.appendOutput(`[${method.toUpperCase()}] ${args.join(' ')}`);
+                    };
+                });
+            }
+
+            appendOutput(message) {
+                const timestamp = new Date().toLocaleTimeString();
+                this.output.textContent += `[${timestamp}] ${message}\n`;
+                this.output.scrollTop = this.output.scrollHeight;
+            }
+
+            async runTest(name, testFunction) {
+                this.appendOutput(`\n=== RUNNING TEST: ${name} ===`);
+                
+                try {
+                    const result = await testFunction();
+                    this.addResult(name, true, result);
+                    this.appendOutput(`✅ PASS: ${name}`);
+                    return true;
+                } catch (error) {
+                    this.addResult(name, false, error.message);
+                    this.appendOutput(`❌ FAIL: ${name} - ${error.message}`);
+                    return false;
+                }
+            }
+
+            addResult(testName, passed, message) {
+                const result = {
+                    name: testName,
+                    passed,
+                    message,
+                    timestamp: new Date()
+                };
+                
+                this.results.push(result);
+                this.updateResultsDisplay();
+            }
+
+            updateResultsDisplay() {
+                const passedCount = this.results.filter(r => r.passed).length;
+                const failedCount = this.results.length - passedCount;
+                
+                this.resultsContainer.innerHTML = `
+                    <div class="test-result ${failedCount === 0 ? 'test-pass' : 'test-fail'}">
+                        <strong>Summary:</strong> ${passedCount} passed, ${failedCount} failed (${this.results.length} total)
+                    </div>
+                    ${this.results.map(result => `
+                        <div class="test-result ${result.passed ? 'test-pass' : 'test-fail'}">
+                            <strong>${result.name}</strong>: ${result.message}
+                            <small> (${result.timestamp.toLocaleTimeString()})</small>
+                        </div>
+                    `).join('')}
+                `;
+            }
+
+            clear() {
+                this.results = [];
+                this.output.textContent = '';
+                this.updateResultsDisplay();
+            }
+        }
+
+        const testFramework = new TestFramework();
+
+        // Test Cases
+        async function testMemoryLeaks() {
+            await testFramework.runTest("Memory Leak Prevention", async () => {
+                // Test 1: Auto-save timer cleanup
+                const app = new NoteOrganizerApp();
+                
+                if (!app.autoSaveInterval) {
+                    throw new Error("Auto-save interval not created");
+                }
+                
+                const intervalId = app.autoSaveInterval;
+                app.destroy();
+                
+                if (app.autoSaveInterval !== null) {
+                    throw new Error("Auto-save interval not cleared on destroy");
+                }
+                
+                // Test 2: Event listener cleanup
+                if (app.eventListeners.length !== 0) {
+                    throw new Error("Event listeners not cleaned up");
+                }
+                
+                return "Auto-save interval and event listeners properly cleaned up";
+            });
+        }
+
+        async function testXSSProtection() {
+            await testFramework.runTest("XSS Protection", async () => {
+                // Test malicious content sanitization
+                const app = new NoteOrganizerApp();
+                
+                const maliciousContent = '<script>alert("XSS")</script><img src=x onerror=alert("XSS")>';
+                const sanitized = app.sanitizeHTML(maliciousContent);
+                
+                if (sanitized.includes('<script>') || sanitized.includes('onerror=')) {
+                    throw new Error("Malicious content not properly sanitized");
+                }
+                
+                // Test HTML stripping
+                const htmlContent = '<p>Safe content</p><script>alert("bad")</script>';
+                const stripped = app.stripHTML(htmlContent);
+                
+                if (stripped !== 'Safe content') {
+                    throw new Error("HTML not properly stripped");
+                }
+                
+                app.destroy();
+                return "XSS protection working correctly";
+            });
+        }
+
+        async function testValidation() {
+            await testFramework.runTest("Input Validation", async () => {
+                const noteManager = new NoteManager();
+                
+                // Test note validation
+                const invalidNote = {
+                    id: null,
+                    title: 'x'.repeat(1000), // Too long
+                    content: 'x'.repeat(2 * 1024 * 1024), // Too large
+                    tags: ['valid', '', 'x'.repeat(100), ...Array(30).fill('tag')] // Invalid tags
+                };
+                
+                const validatedNote = noteManager.validateNote(invalidNote);
+                
+                if (!validatedNote) {
+                    throw new Error("Note validation should handle invalid data gracefully");
+                }
+                
+                if (validatedNote.title.length > noteManager.maxTitleLength) {
+                    throw new Error("Title not properly truncated");
+                }
+                
+                if (validatedNote.content.length > noteManager.maxNoteSize) {
+                    throw new Error("Content not properly truncated");
+                }
+                
+                if (validatedNote.tags.length > noteManager.maxTagsPerNote) {
+                    throw new Error("Tags not properly limited");
+                }
+                
+                return "Input validation working correctly";
+            });
+        }
+
+        async function testErrorHandling() {
+            await testFramework.runTest("Error Handling", async () => {
+                // Test storage manager error handling
+                const storageManager = new StorageManager();
+                
+                // Test without initialization
+                try {
+                    await storageManager.saveNote({ id: 'test' });
+                    throw new Error("Should have thrown error without initialization");
+                } catch (error) {
+                    if (!error.message.includes('Database not initialized')) {
+                        throw new Error("Wrong error message for uninitialized database");
+                    }
+                }
+                
+                // Test keyboard shortcuts error handling
+                const keyboardShortcuts = new KeyboardShortcuts();
+                
+                // Test invalid shortcut registration
+                const result = keyboardShortcuts.register('', null);
+                if (result !== false) {
+                    throw new Error("Should reject invalid shortcut registration");
+                }
+                
+                return "Error handling working correctly";
+            });
+        }
+
+        async function testRaceConditionPrevention() {
+            await testFramework.runTest("Race Condition Prevention", async () => {
+                const noteManager = new NoteManager();
+                const storageManager = new StorageManager();
+                noteManager.init(storageManager);
+                
+                // Test concurrent save operations
+                const savePromise1 = noteManager.saveNotes();
+                const savePromise2 = noteManager.saveNotes();
+                
+                // Both should complete without errors
+                await Promise.all([savePromise1, savePromise2]);
+                
+                return "Race condition prevention working";
+            });
+        }
+
+        async function testSecureFormatting() {
+            await testFramework.runTest("Secure Text Formatting", async () => {
+                const keyboardShortcuts = new KeyboardShortcuts();
+                
+                // Create a mock selection
+                const mockSelection = {
+                    rangeCount: 1,
+                    getRangeAt: (index) => ({
+                        toString: () => 'selected text',
+                        extractContents: () => document.createTextNode('selected text'),
+                        insertNode: (node) => {}
+                    }),
+                    removeAllRanges: () => {},
+                    addRange: () => {}
+                };
+                
+                // Mock window.getSelection
+                const originalGetSelection = window.getSelection;
+                window.getSelection = () => mockSelection;
+                
+                try {
+                    // Should not throw error
+                    keyboardShortcuts.executeModernFormatCommand('bold');
+                    return "Secure formatting implemented successfully";
+                } catch (error) {
+                    throw new Error(`Formatting error: ${error.message}`);
+                } finally {
+                    window.getSelection = originalGetSelection;
+                }
+            });
+        }
+
+        async function testIndexedDBFallback() {
+            await testFramework.runTest("IndexedDB Support Check", async () => {
+                const storageManager = new StorageManager();
+                
+                // Mock IndexedDB unavailability
+                const originalIndexedDB = window.indexedDB;
+                delete window.indexedDB;
+                
+                try {
+                    await storageManager.init();
+                    throw new Error("Should have thrown error when IndexedDB is unavailable");
+                } catch (error) {
+                    if (!error.message.includes('not supported')) {
+                        throw new Error("Wrong error for IndexedDB unavailability");
+                    }
+                } finally {
+                    window.indexedDB = originalIndexedDB;
+                }
+                
+                return "IndexedDB fallback handling works correctly";
+            });
+        }
+
+        async function runAllTests() {
+            testFramework.clear();
+            testFramework.appendOutput("🚀 Starting comprehensive bug fix verification...\n");
+            
+            const tests = [
+                testXSSProtection,
+                testValidation,
+                testErrorHandling,
+                testRaceConditionPrevention,
+                testSecureFormatting,
+                testIndexedDBFallback,
+                // Note: Memory leak test is potentially disruptive, so it's separate
+            ];
+            
+            for (const test of tests) {
+                await test();
+                // Small delay between tests
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            testFramework.appendOutput("\n✨ All tests completed!");
+        }
+
+        function clearResults() {
+            testFramework.clear();
+        }
+
+        // Initialize test environment
+        testFramework.appendOutput("🧪 Test environment initialized. Ready to run tests!");
+    </script>
+</body>
+</html>
